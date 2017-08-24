@@ -32,9 +32,7 @@ typedef NS_ENUM(NSInteger, AxisType) {
 
 @interface FoldingChart()<UIGestureRecognizerDelegate>
 @property (nonatomic, assign) int yCount;
-@property (nonatomic, assign) XType xType;
 @property (nonatomic, assign) CGFloat maxY;
-
 @property (nonatomic, strong) NSArray *dataSource;                  //数据源
 @property (nonatomic, strong) NSMutableArray *dataSourcePoint;      //数据源坐标点
 
@@ -70,7 +68,7 @@ typedef NS_ENUM(NSInteger, AxisType) {
     return _customDataXAxisPoint;
 }
 - (NSMutableArray *)customDataXAxisPointValue {
-    if (_customDataXAxisPointValue) {
+    if (_customDataXAxisPointValue == nil) {
         _customDataXAxisPointValue = [NSMutableArray array];
     }
     return _customDataXAxisPointValue;
@@ -100,6 +98,7 @@ typedef NS_ENUM(NSInteger, AxisType) {
             [circlePointArr addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin * (i + 1),
                                                                             Y_HEIGHT - yPosition + MARGIN)]];
         }
+        
         [self.customDataXAxisPoint addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin * (i + 1),
                                                                                    START_POINT_Y)]];
         
@@ -112,19 +111,29 @@ typedef NS_ENUM(NSInteger, AxisType) {
 }
 
 - (void)setMaxY:(CGFloat)maxY {
-    _maxY = Y_HEIGHT > maxY ? Y_HEIGHT :maxY; ;
+    CGFloat tmpValue = maxY;
+    int time = 0;
+    while (tmpValue > 10) {
+        time++;
+        tmpValue /= 10;
+    }
+    tmpValue = (int)tmpValue + 1;
+    self.yCount = tmpValue;
+    for (int i = 1;  i<= time ; i++) {
+       tmpValue *= 10;
+    }
+    if (tmpValue<10) {
+        tmpValue = 10;
+    }
+    _maxY = tmpValue;
 }
 
 
 #pragma mark - 初始化
 - (instancetype)initWithFrame:(CGRect)frame
-               WithDataSource:(NSArray *)data
-                    withCount:(int)count
-                     timeType:(XType)type {
+               WithDataSource:(NSArray *)data {
     
     if (self = [super initWithFrame:frame]) {
-        self.yCount = count + 1;
-        self.xType = type;
         self.maxY = [self getMaxFromArray:data];
         self.dataSource = data;
         [self buidlMap];

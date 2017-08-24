@@ -21,11 +21,9 @@
 
 
 - (void)showFoldingChart {
-    NSArray *dataSource = @[@1212,@4642,@7321,@464,@1442,@7111,@2823,@353,@464,@464,@144];
+    NSArray *dataSource = @[@222,@3134,@123,@523,@543,@523,@111,@452,@238,@122,@23];
     FoldingChart *chartV = [[FoldingChart alloc]initWithFrame:self.charView.bounds
-                                               WithDataSource:dataSource
-                                                    withCount:5
-                                                     timeType:mCustom];
+                                               WithDataSource:dataSource];
     
     [self.charView addSubview:chartV];
 }
