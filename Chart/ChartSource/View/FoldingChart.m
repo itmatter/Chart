@@ -35,21 +35,11 @@ typedef NS_ENUM(NSInteger, AxisType) {
 @property (nonatomic, assign) XType xType;
 @property (nonatomic, assign) CGFloat maxY;
 
-@property (nonatomic, strong) NSArray *dataSource;
+@property (nonatomic, strong) NSArray *dataSource;                  //数据源
+@property (nonatomic, strong) NSMutableArray *dataSourcePoint;      //数据源坐标点
 
-@property (nonatomic, strong) NSArray *xAxisDayPoint;   //x轴坐标点
-@property (nonatomic, strong) NSArray *xAxisWeekPoint;   //x轴坐标点
-@property (nonatomic, strong) NSArray *xAxisMonthPoint;   //x轴坐标点
-
-@property (nonatomic, strong) NSMutableArray *dataSourcePoint;   //数据源坐标点
-@property (nonatomic, strong) NSMutableArray *customDataXAxisPoint;   //X轴数据坐标点
-@property (nonatomic, strong) NSMutableArray *customDataXAxisPointValue;   //X数据坐标点数
-
-
-@property (nonatomic, strong) NSArray *xAxisDayValues;  //x轴的标尺数值
-@property (nonatomic, strong) NSArray *xAxisWeekValues;  //x轴的标尺数值
-@property (nonatomic, strong) NSMutableArray *xAxisMonthValues;  //x轴的标尺数值
-
+@property (nonatomic, strong) NSMutableArray *customDataXAxisPoint;         //X轴数据坐标点
+@property (nonatomic, strong) NSMutableArray *customDataXAxisPointValue;    //X数据坐标点数值
 
 @end
 
@@ -58,60 +48,15 @@ typedef NS_ENUM(NSInteger, AxisType) {
     NSMutableArray *_yAxisPoint;    //y轴坐标点
     NSMutableArray *_yAxisValues;   //y轴的标尺数值
     
-    UIBezierPath *_instructionsLine; //指示图层
-    CAShapeLayer *_instructionsLayer; //指示图层
-    UILabel *_instructionsLabel; //指示图层
+    UIBezierPath *_instructionsLine;    //指示路径
+    CAShapeLayer *_instructionsLayer;   //指示图层
+    UILabel *_instructionsLabel;        //指示文本
 }
 
 #pragma mark - 懒加载
 
 //初始化xDay坐标的内容
-- (NSArray *)xAxisDayPoint {
-    if (_xAxisDayPoint == nil) {
-        _xAxisDayPoint = [self calculateIntervalPoints:8];
-    }
-    return _xAxisDayPoint;
-}
-- (NSArray *)xAxisWeekPoint {
-    if (_xAxisWeekPoint == nil) {
-        _xAxisWeekPoint =  [self calculateIntervalPoints:7];
-    }
-    return _xAxisWeekPoint;
-}
-- (NSArray *)xAxisMonthPoint {
-    if (_xAxisMonthPoint == nil) {
-        //计算某一个月的总天数
-        _xAxisMonthPoint = [self calculateIntervalPoints:(int)[self getNumberOfDaysInMonth] ];
-    }
-    return _xAxisMonthPoint;
-}
-- (NSArray *)xAxisDayValues {
-    if (_xAxisDayValues == nil) {
-        _xAxisDayValues = [NSMutableArray arrayWithObjects: @"03:00",@"06:00",
-                                                            @"09:00",@"12:00",@"15:00",
-                                                            @"18:00",@"21:00",@"24:00",
-                           nil];
-    }
-    return _xAxisDayValues;
-}
-- (NSArray *)xAxisWeekValues {
-    if (_xAxisWeekValues == nil) {
-        _xAxisWeekValues = [NSMutableArray arrayWithObjects:@"Mon",@"Tues",@"Wed",
-                                                            @"Thur",@"Fri",@"Sat",
-                                                            @"Sun",
-                            nil];
-    }
-    return _xAxisWeekValues;
-}
-- (NSMutableArray *)xAxisMonthValues {
-    if (_xAxisMonthValues == nil) {
-        _xAxisMonthValues = [NSMutableArray array];
-        for (int i = 1; i < [self getNumberOfDaysInMonth] + 1  ; i++) {
-            [_xAxisMonthValues addObject:[NSString stringWithFormat:@"%@",@(i)]];
-        }
-    }
-    return _xAxisMonthValues;
-}
+
 - (NSMutableArray *)dataSourcePoint {
     if (_dataSourcePoint == nil) {
         _dataSourcePoint = [NSMutableArray array];
@@ -124,25 +69,76 @@ typedef NS_ENUM(NSInteger, AxisType) {
     }
     return _customDataXAxisPoint;
 }
+- (NSMutableArray *)customDataXAxisPointValue {
+    if (_customDataXAxisPointValue) {
+        _customDataXAxisPointValue = [NSMutableArray array];
+    }
+    return _customDataXAxisPointValue;
+}
+
+//Setter
+- (void)setDataSource:(NSArray *)dataSource {
+    _dataSource = dataSource;
+    //初始化方法获取到数据源之后,这里计算:
+    //1.数据源的坐标点
+    //2.X轴数据坐标点
+    //3.X轴数据坐标点数
+    //核心部分
+    CGFloat margin = X_WIDTH / (dataSource.count + 1);
+    CGFloat max = self.maxY;
+    
+    
+    NSMutableArray *circlePointArr = [NSMutableArray array];
+    
+    for (int i = 0; i<dataSource.count; i++) {
+        //计算Y坐标
+        CGFloat yPosition = [(NSNumber *)dataSource[i] floatValue] / max * Y_HEIGHT ;
+        if (i == 0) {
+            [circlePointArr addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin,
+                                                                            Y_HEIGHT - yPosition + MARGIN)]];
+        }else {
+            [circlePointArr addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin * (i + 1),
+                                                                            Y_HEIGHT - yPosition + MARGIN)]];
+        }
+        [self.customDataXAxisPoint addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin * (i + 1),
+                                                                                   START_POINT_Y)]];
+        
+        [self.customDataXAxisPointValue addObject:[NSString stringWithFormat:@"%d",i+1]];
+    }
+    
+    //统计数据源坐标
+    self.dataSourcePoint = circlePointArr;
+
+}
+
+- (void)setMaxY:(CGFloat)maxY {
+    _maxY = Y_HEIGHT > maxY ? Y_HEIGHT :maxY; ;
+}
+
 
 #pragma mark - 初始化
-- (instancetype)initWithFrame:(CGRect)frame WithDataSource:(NSArray *)data withCount:(int)count timeType:(XType)type {
+- (instancetype)initWithFrame:(CGRect)frame
+               WithDataSource:(NSArray *)data
+                    withCount:(int)count
+                     timeType:(XType)type {
+    
     if (self = [super initWithFrame:frame]) {
-        self.dataSource = data;
         self.yCount = count + 1;
         self.xType = type;
-        CGFloat dataMaxValue = [self getMaxFromArray:data];
-        self.maxY = Y_HEIGHT > dataMaxValue ? Y_HEIGHT :dataMaxValue;
+        self.maxY = [self getMaxFromArray:data];
+        self.dataSource = data;
         [self buidlMap];
     }
     return self;
+    
 }
 
 
 - (void)buidlMap {
-    [self drawLine:self.dataSource];
     [self setupYAxis];
     [self setupXAxis];
+    [self drawLine:self.dataSource];
+
 }
 
 
@@ -153,37 +149,15 @@ typedef NS_ENUM(NSInteger, AxisType) {
  @param data 数据源 : NSNumber类型数组.
  */
 - (void)drawLine:(NSArray *)data {
-    
-    if (self.xType == mDay) {
-        NSAssert(data.count == 8, @"请设置8个值");
-    }else if (self.xType == mWeek) {
-        NSAssert(data.count == 7, @"请设置7个值");
-    }else if (self.xType == mMonth) {
-        NSInteger count = [self getNumberOfDaysInMonth];
-        NSString *info = [NSString stringWithFormat:@"请设置%ld个值",(long)[self getNumberOfDaysInMonth]];
-        NSAssert(data.count == count,info);
-    }
-    
-    //核心部分
-    CGFloat margin = X_WIDTH / (data.count + 1);
-    CGFloat max = self.maxY;
-    
-    NSMutableArray *circlePointArr = [NSMutableArray array];
-    
+
     UIBezierPath *line = [UIBezierPath bezierPath];
     for (int i = 0; i<data.count; i++) {
-        CGFloat yPosition = [(NSNumber *)data[i] floatValue] / max * Y_HEIGHT ;
         if (i == 0) {
-            [line moveToPoint:CGPointMake(START_POINT_X + margin, Y_HEIGHT - yPosition + MARGIN)];
-            [circlePointArr addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin, Y_HEIGHT - yPosition + MARGIN)]];
+            [line moveToPoint:[self.dataSourcePoint[i] CGPointValue] ];
         }else {
-            [line addLineToPoint:CGPointMake(START_POINT_X + margin * (i + 1), Y_HEIGHT - yPosition + MARGIN)];
-            [circlePointArr addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin * (i + 1), Y_HEIGHT - yPosition + MARGIN)]];
+            [line addLineToPoint:[self.dataSourcePoint[i] CGPointValue] ];
         }
-        [self.customDataXAxisPoint addObject:[NSValue valueWithCGPoint:CGPointMake(START_POINT_X + margin * (i + 1),START_POINT_Y)]];
     }
-    
-    self.dataSourcePoint = circlePointArr;
     
     CAShapeLayer *layer = [CAShapeLayer layer];
     layer.frame = self.bounds;
@@ -203,9 +177,8 @@ typedef NS_ENUM(NSInteger, AxisType) {
     [layer addAnimation:strokeEndAni forKey:nil];
 
     //添加圆点
-    [self addCirclePoint: circlePointArr];
+    [self addCirclePoint: self.dataSourcePoint];
 }
-
 
 /**
  设置Y轴坐标尺
@@ -223,7 +196,6 @@ typedef NS_ENUM(NSInteger, AxisType) {
     layer.strokeColor = STROKE_COLOR;
     [self.layer addSublayer:layer];
 }
-
 
 /**
  设置X轴坐标尺
@@ -259,31 +231,17 @@ typedef NS_ENUM(NSInteger, AxisType) {
     }
     //添加小圆点
     [self addCirclePoint: _yAxisPoint];
-    [self addPointCentent:_yAxisPoint AndTexts:_yAxisValues withAxisType:yAxis];
+    [self addPointCentent:_yAxisPoint
+                 AndTexts:_yAxisValues
+             withAxisType:yAxis];
 
- 
     
-    
-    if (self.xType == mDay) {
-        [self addCirclePoint: self.xAxisDayPoint];
-        [self addPointCentent:self.xAxisDayPoint AndTexts:self.xAxisDayValues withAxisType:xAxis];
-    }else if (self.xType == mWeek) {
-        [self addCirclePoint: self.xAxisWeekPoint];
-        [self addPointCentent:self.xAxisWeekPoint AndTexts:self.xAxisWeekValues withAxisType:xAxis];
-    }else if (self.xType == mMonth) {
-        [self addCirclePoint: self.xAxisMonthPoint];
-        [self addPointCentent:self.xAxisMonthPoint AndTexts:self.xAxisMonthValues withAxisType:xAxis];
-    }else {
-        NSMutableArray *xValue = [NSMutableArray array];
-        for (int i = 0; i < self.dataSource.count; i++) {
-            [xValue addObject:[NSString stringWithFormat:@"%d",i]];
-        }
-        [self addCirclePoint:self.customDataXAxisPoint];
-        [self addPointCentent:self.customDataXAxisPoint AndTexts:xValue withAxisType:xAxis];
-    }
+    [self addCirclePoint:self.customDataXAxisPoint];
+    [self addPointCentent:self.customDataXAxisPoint
+                 AndTexts:self.customDataXAxisPointValue
+             withAxisType:xAxis];
 
 }
-
 
 /**
  添加小圆点
@@ -353,8 +311,6 @@ typedef NS_ENUM(NSInteger, AxisType) {
 
 
 #pragma mark - 其他方法
-
-
 /**
  遍历数组求最大值
 
